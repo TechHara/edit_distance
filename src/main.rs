@@ -1,6 +1,6 @@
-use std::io::{BufReader, BufWriter, BufRead, Write};
-use std::fs::File;
 use clap::{Parser, ValueEnum};
+use std::fs::File;
+use std::io::{BufRead, BufReader, BufWriter, Write};
 
 #[derive(Parser)]
 #[command(name = "levenshtein Distance")]
@@ -53,12 +53,16 @@ fn main() -> std::io::Result<()> {
     let ifs = BufReader::new(File::open(input)?);
     let mut ofs = BufWriter::new(File::create(&output)?);
     let runner = get_runner(cli.atom, cli.metric);
-    
+
     for (linenum, line) in ifs.lines().enumerate() {
         let line = line?;
         let strings: Vec<&str> = line.split(cli.sep).collect();
         if strings.len() != 2 {
-            eprintln!("Skipping invalid line #{}: {}", linenum, strings.join(&cli.sep.to_string()));
+            eprintln!(
+                "Skipping invalid line #{}: {}",
+                linenum,
+                strings.join(&cli.sep.to_string())
+            );
             continue;
         }
 
@@ -108,28 +112,35 @@ fn get_runner(atom: Atom, metric: Metric) -> impl Fn(&str, &str) -> f64 {
     }
 }
 
-fn levenshtein_distance<T>(x: &[T], y: &[T]) -> usize 
-where T: std::cmp::Eq {
+fn levenshtein_distance<T>(x: &[T], y: &[T]) -> usize
+where
+    T: std::cmp::Eq,
+{
     let nx = x.len();
     let ny = y.len();
-    let mut memo = vec![usize::MAX; nx*ny];
+    let mut memo = vec![usize::MAX; nx * ny];
     levenshtein_distance_helper(x, y, &mut memo, ny)
 }
 
 fn levenshtein_distance_helper<T>(x: &[T], y: &[T], memo: &mut Vec<usize>, ny: usize) -> usize
-where T: std::cmp::Eq {
+where
+    T: std::cmp::Eq,
+{
     if x.len() == 0 || y.len() == 0 {
         return x.len().max(y.len());
-    } 
+    }
     let idx = (x.len() - 1) * ny + y.len() - 1;
     memo[idx] = match memo[idx] == usize::MAX {
-        false => { return memo[idx]; },
+        false => {
+            return memo[idx];
+        }
         true => match x.last().unwrap() == y.last().unwrap() {
-            true => levenshtein_distance_helper(&x[..x.len()-1], &y[..y.len()-1], memo, ny),
+            true => levenshtein_distance_helper(&x[..x.len() - 1], &y[..y.len() - 1], memo, ny),
             false => {
                 let insert = levenshtein_distance_helper(&x[..x.len() - 1], y, memo, ny);
                 let delete = levenshtein_distance_helper(x, &y[..y.len() - 1], memo, ny);
-                let replace = levenshtein_distance_helper(&x[..x.len() - 1], &y[..y.len() - 1], memo, ny);
+                let replace =
+                    levenshtein_distance_helper(&x[..x.len() - 1], &y[..y.len() - 1], memo, ny);
 
                 insert.min(delete).min(replace) + 1
             }
@@ -139,30 +150,40 @@ where T: std::cmp::Eq {
     memo[idx]
 }
 
-fn osa_distance<T>(x: &[T], y: &[T]) -> usize 
-where T: std::cmp::Eq {
+fn osa_distance<T>(x: &[T], y: &[T]) -> usize
+where
+    T: std::cmp::Eq,
+{
     let nx = x.len();
     let ny = y.len();
-    let mut memo = vec![usize::MAX; nx*ny];
+    let mut memo = vec![usize::MAX; nx * ny];
     osa_distance_helper(x, y, &mut memo, ny)
 }
 
 fn osa_distance_helper<T>(x: &[T], y: &[T], memo: &mut Vec<usize>, ny: usize) -> usize
-where T: std::cmp::Eq {
+where
+    T: std::cmp::Eq,
+{
     if x.len() == 0 || y.len() == 0 {
         return x.len().max(y.len());
-    } 
+    }
     let idx = (x.len() - 1) * ny + y.len() - 1;
     memo[idx] = match memo[idx] == usize::MAX {
-        false => { return memo[idx]; },
+        false => {
+            return memo[idx];
+        }
         _ => match x.last().unwrap() == y.last().unwrap() {
-            true => osa_distance_helper(&x[..x.len()-1], &y[..y.len()-1], memo, ny),
+            true => osa_distance_helper(&x[..x.len() - 1], &y[..y.len() - 1], memo, ny),
             false => {
                 let insert = osa_distance_helper(&x[..x.len() - 1], y, memo, ny);
                 let delete = osa_distance_helper(x, &y[..y.len() - 1], memo, ny);
                 let replace = osa_distance_helper(&x[..x.len() - 1], &y[..y.len() - 1], memo, ny);
-                let transpose = match x.len() >= 2 && y.len() >= 2 && x[x.len()-1] == y[y.len()-2] && x[x.len()-2] == y[y.len()-1] {
-                    true => osa_distance_helper(&x[..x.len()-2], &y[..y.len()-2], memo, ny),
+                let transpose = match x.len() >= 2
+                    && y.len() >= 2
+                    && x[x.len() - 1] == y[y.len() - 2]
+                    && x[x.len() - 2] == y[y.len() - 1]
+                {
+                    true => osa_distance_helper(&x[..x.len() - 2], &y[..y.len() - 2], memo, ny),
                     false => insert,
                 };
 
